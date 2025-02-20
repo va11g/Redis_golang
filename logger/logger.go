@@ -1,5 +1,13 @@
 package logger
 
+import (
+	"log"
+	"os"
+	"sync"
+
+	"config"
+)
+
 type LogLevel int
 type LogConfig struct {
 	Path  string
@@ -15,8 +23,25 @@ const (
 	PANIC
 )
 
+var (
+	logFile            *os.File
+	loggger            *log.Logger
+	logMu              sync.Mutex
+	levelLabels        = []string{"debug", "info", "warning", "error", "panic"}
+	logCfg             *LogConfig
+	defaultCallerDepth = 2
+	logPerfix          = ""
+)
+
+func SetUp(cfg *config.Config) error {
+	var err error
+	logCfg = &LogConfig{
+		Path: cfg.LogDir,
+	}
+}
+
 func Error(v ...any) {
-	if logcfg.Level > ERROR {
+	if logCfg.Level > ERROR {
 		return
 	}
 	logMu.Lock()
