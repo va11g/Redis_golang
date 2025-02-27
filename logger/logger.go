@@ -1,11 +1,15 @@
 package logger
 
 import (
+	"fmt"
+	"io"
 	"log"
 	"os"
+	"path"
+	"path/filepath"
+	"resp/config"
+	"runtime"
 	"sync"
-
-	"config"
 )
 
 type LogLevel int
@@ -25,19 +29,84 @@ const (
 
 var (
 	logFile            *os.File
-	loggger            *log.Logger
+	logger             *log.Logger
 	logMu              sync.Mutex
 	levelLabels        = []string{"debug", "info", "warning", "error", "panic"}
 	logCfg             *LogConfig
 	defaultCallerDepth = 2
-	logPerfix          = ""
+	logPrefix          = ""
 )
 
 func SetUp(cfg *config.Config) error {
 	var err error
 	logCfg = &LogConfig{
-		Path: cfg.LogDir,
+		Path:  cfg.LogDir,
+		Name:  "redis.log",
+		Level: INFO,
 	}
+	for i, v := range levelLabels {
+		if v == cfg.LogLevel {
+			logCfg.Level = LogLevel(i)
+			break
+		}
+	}
+
+	if _, err = os.Stat(logCfg.Path); err != nil {
+		mkErr := os.Mkdir(logCfg.Path, 0755)
+		if mkErr != nil {
+			return mkErr
+		}
+	}
+
+	logfile := path.Join(logCfg.Path, logCfg.Name)
+	logFile, err = os.OpenFile(logfile, os.O_RDWR|os.O_CREATE, 0755)
+	if err != nil {
+		return err
+	}
+	writer := io.MultiWriter(os.Stdout, logFile)
+	logger = log.New(writer, "", log.LstdFlags)
+	return nil
+}
+
+// 前缀
+func setPrefix(level LogLevel) {
+	_, file, line, ok := runtime.Caller(defaultCallerDepth)
+	if ok {
+		logPrefix = fmt.Sprintf("[%s][%s:%d] ", levelLabels[level], filepath.Base(file), line)
+	} else {
+		logPrefix = fmt.Sprintf("[%s] ", levelLabels[level])
+	}
+	logger.SetPrefix(logPrefix)
+}
+
+func Debug(v ...any) {
+	if logCfg.Level > DEBUG {
+		return
+	}
+	logMu.Lock()
+	defer logMu.Unlock()
+	setPrefix(DEBUG)
+	logger.Println(v...)
+}
+
+func Info(v ...any) {
+	if logCfg.Level > INFO {
+		return
+	}
+	logMu.Lock()
+	defer logMu.Unlock()
+	setPrefix(INFO)
+	logger.Println(v...)
+}
+
+func Warning(v ...any) {
+	if logCfg.Level > WARNING {
+		return
+	}
+	logMu.Lock()
+	defer logMu.Unlock()
+	setPrefix(WARNING)
+	logger.Println(v...)
 }
 
 func Error(v ...any) {
@@ -46,6 +115,16 @@ func Error(v ...any) {
 	}
 	logMu.Lock()
 	defer logMu.Unlock()
-	setPerfix(ERROR)
-	logger.PrintLn(v)
+	setPrefix(ERROR)
+	logger.Println(v...)
+}
+
+func Panic(v ...any) {
+	if logCfg.Level > PANIC {
+		return
+	}
+	logMu.Lock()
+	defer logMu.Unlock()
+	setPrefix(PANIC)
+	logger.Println(v...)
 }
