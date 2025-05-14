@@ -2,15 +2,7 @@ package memdb
 
 import (
 	"fmt"
-	"resp/logger"
 )
-
-type Node[T Val] struct {
-	Value  T
-	left   *Node[T]
-	right  *Node[T]
-	height int64
-}
 
 type Val interface {
 	Cmp(val Val) int64
@@ -23,6 +15,13 @@ type Val interface {
 	IsNameExist(name string) bool
 }
 
+type Node[T Val] struct {
+	Value  T
+	left   *Node[T]
+	right  *Node[T]
+	height int64
+}
+
 type ATree[T Val] struct {
 	root   *Node[T]
 	values []map[string]float64
@@ -32,85 +31,22 @@ type ATree[T Val] struct {
 
 // ----------------------------------------------------------------------------------------------------
 //
-//       _____                    _____                    _____
-//      /\    \                  /\    \                  /\    \
-//     /::\____\                /::\    \                /::\____\
-//    /:::/    /               /::::\    \              /:::/    /
-//   /:::/    /               /::::::\    \            /:::/    /
-//  /:::/    /               /:::/\:::\    \          /:::/    /
-// /:::/____/               /:::/__\:::\    \        /:::/    /
-// |::|    |               /::::\   \:::\    \      /:::/    /
-// |::|    |     _____    /::::::\   \:::\    \    /:::/    /
-// |::|    |    /\    \  /:::/\:::\   \:::\    \  /:::/    /
-// |::|    |   /::\____\/:::/  \:::\   \:::\____\/:::/____/
-// |::|    |  /:::/    /\::/    \:::\  /:::/    /\:::\    \
-// |::|    | /:::/    /  \/____/ \:::\/:::/    /  \:::\    \
-// |::|____|/:::/    /            \::::::/    /    \:::\    \
-// |:::::::::::/    /              \::::/    /      \:::\    \
-// \::::::::::/____/               /:::/    /        \:::\    \
-//  ~~~~~~~~~~                    /:::/    /          \:::\    \
-//                               /:::/    /            \:::\    \
-//                              /:::/    /              \:::\____\
-//                              \::/    /                \::/    /
-//                               \/____/                  \/____/
+//                                 ,--,
+//                              ,---.'|
+//                 ,---,        |   | :
+//        ,---.   '  .' \       :   : |
+//       /__./|  /  ;    '.     |   ' :
+//  ,---.;  ; | :  :       \    ;   ; '
+// /___/ \  | | :  |   /\   \   '   | |__
+// \   ;  \ ' | |  :  ' ;.   :  |   | :.'|
+//  \   \  \: | |  |  ;/  \   \ '   :    ;
+//   ;   \  ' . '  :  | \  \ ,' |   |  ./
+//    \   \   ' |  |  '  '--'   ;   : ;
+//     \   `  ; |  :  :         |   ,/
+//      :   \ | |  | ,'         '---'
+//       '---"  `--''
 //
 // ----------------------------------------------------------------------------------------------------
-
-type SortedSet[T Val] struct {
-	*ATree[T]
-}
-
-func NewSortedSet() *SortedSet[*SortedSetNode] {
-	return &SortedSet[*SortedSetNode]{NewATree[*SortedSetNode]()}
-}
-
-type SortedSetNode struct {
-	Names map[string]struct{} // allow multiple member with the same value
-	Score float64
-}
-
-func (n *SortedSetNode) Cmp(val Val) int64 {
-	n2 := val.(*SortedSetNode)
-	if n.Score > n2.Score {
-		return 1
-	} else if n.Score < n2.Score {
-		return -1
-	} else if n.Score == n2.Score {
-		return 0
-	} else {
-		logger.Error("cant compare values in sorted set Cmp")
-		return 0
-	}
-}
-
-func (n *SortedSetNode) SetScore(score float64) {
-	n.Score = score
-}
-
-func (n *SortedSetNode) GetScore() float64 {
-	return n.Score
-}
-
-func (n *SortedSetNode) GetNames() map[string]struct{} {
-	return n.Names
-}
-
-func (n *SortedSetNode) AddName(name string) {
-	n.Names[name] = struct{}{}
-}
-
-func (n *SortedSetNode) DeleteName(name string) {
-	delete(n.Names, name)
-}
-
-func (n *SortedSetNode) Empty() {
-	n.Names = nil
-}
-
-func (n *SortedSetNode) IsNameExist(name string) bool {
-	_, ok := n.Names[name]
-	return ok
-}
 
 // ----------------------------------------------------------------------------------------------------
 //
@@ -143,8 +79,15 @@ func (t *ATree[T]) String() string {
 	return fmt.Sprint()
 }
 
-func (t *ATree[T]) IsEmpty() bool {
+func (t *ATree[T]) Empty() bool {
 	return t.root == nil
+}
+
+func (t *ATree[T]) Balance() int64 {
+	if t.root != nil {
+		return
+	}
+	return 0
 }
 
 // ----------------------------------------------------------------------------------------------------
